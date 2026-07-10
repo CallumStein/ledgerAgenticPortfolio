@@ -104,6 +104,15 @@ class PortfolioAgent:
                                     "A description of the income, such as Salary."
                                 ),
                             },
+                            "transaction_date": {
+                                "type": "string",
+                                "description": (
+                                    "Optional transaction date in YYYY-MM-DD format. "
+                                    "Convert dates from the user's request into this format. "
+                                    "For example, 06/06/2026 becomes 2026-06-06. "
+                                    "If no date is supplied, omit this property."
+                                ),
+                            },
                         },
                         "required": ["amount", "description"],
                         "additionalProperties": False,
@@ -143,6 +152,15 @@ class PortfolioAgent:
                                     "such as Groceries."
                                 ),
                             },
+                            "transaction_date": {
+                                "type": "string",
+                                "description": (
+                                    "Optional transaction date in YYYY-MM-DD format. "
+                                    "Convert dates from the user's request into this format. "
+                                    "For example, 06/06/2026 becomes 2026-06-06. "
+                                    "If no date is supplied, omit this property."
+                                ),
+                            },
                         },
                         "required": ["amount", "description"],
                         "additionalProperties": False,
@@ -155,7 +173,8 @@ class PortfolioAgent:
                     "name": "add_bank_transaction",
                     "description": (
                         "Add a transfer between two bank accounts. "
-                        "The transaction will use today's date automatically."
+                        "Use the supplied transaction date when provided; "
+                        "otherwise the tool will use today's date."
                     ),
                     "parameters": {
                         "type": "object",
@@ -179,6 +198,15 @@ class PortfolioAgent:
                             "destination_account": {
                                 "type": "string",
                                 "description": "The bank account the money enters.",
+                            },
+                            "transaction_date": {
+                                "type": "string",
+                                "description": (
+                                    "Optional transaction date in YYYY-MM-DD format. "
+                                    "Convert dates from the user's request into this format. "
+                                    "For example, 06/06/2026 becomes 2026-06-06. "
+                                    "If no date is supplied, omit this property."
+                                ),
                             },
                         },
                         "required": [
@@ -214,6 +242,10 @@ class PortfolioAgent:
                     "- Bank transfer amounts must always be positive.\n"
                     "- The source_account is the account money leaves.\n"
                     "- The destination_account is the account money enters.\n"
+                    "- When the user supplies a transaction date, convert it "
+                    "to YYYY-MM-DD before calling a write tool. For example, "
+                    "06/06/2026 becomes 2026-06-06. If no date is supplied, "
+                    "omit transaction_date so the tool uses today's date.\n"
                     "- Do not invent an account name when the user has not "
                     "provided enough information.\n"
                     "- Confirm the result after a write tool completes."
@@ -300,6 +332,7 @@ class PortfolioAgent:
                 amount=arguments.get("amount"),
                 currency=arguments.get("currency", "AUD"),
                 description=arguments.get("description"),
+                transaction_date=arguments.get("transaction_date"),
             )
 
         if function_name == "add_income":
@@ -307,6 +340,7 @@ class PortfolioAgent:
                 amount=arguments.get("amount"),
                 currency=arguments.get("currency", "AUD"),
                 description=arguments.get("description"),
+                transaction_date=arguments.get("transaction_date"),
             )
 
         if function_name == "add_bank_transaction":
@@ -316,6 +350,7 @@ class PortfolioAgent:
                 description=arguments.get("description"),
                 source_account=arguments.get("source_account"),
                 destination_account=arguments.get("destination_account"),
+                transaction_date=arguments.get("transaction_date"),
             )
 
         return f"Error: Tool {function_name} not found."
