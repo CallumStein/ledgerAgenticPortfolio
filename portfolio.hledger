@@ -1,0 +1,9 @@
+; Portfolio
+include ./accounts.hledger
+include ./bank.hledger
+include ./opening_balances.hledger
+include ./manual.hledger
+include ./income.hledger
+include ./expenses.hledger
+
+

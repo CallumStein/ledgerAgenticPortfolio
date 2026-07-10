@@ -1,0 +1,5 @@
+; Bank Transactions
+
+2026-07-10 * Transfer to St George
+    Assets:Bank:CommBank Every Day    -250.00 AUD
+    Assets:Bank:StGeorge Incentive Saver    250.00 AUD
