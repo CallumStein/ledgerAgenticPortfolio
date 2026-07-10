@@ -1,7 +1,3 @@
 ; Expenses
 ; Use this file for all expense types (Groceries, Transport, Dining Out, etc.).
 
-
-2026-06-05 * Groceries
-    Expenses:Source    250.00 AUD
-    Assets:Bank:CommBank Every Day    -250.00 AUD

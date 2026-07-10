@@ -1,5 +1,3 @@
 ; Opening Balances
-2026-07-10 * Opening Balance
-    Assets:Bank:CommBank Every Day          1249.89 AUD
-    Assets:Bank:StGeorge Incentive Saver    14834.38 AUD    
-    Equity:Net Worth                        -16,084.27 AUD
+; Use this file for initial balances at the point of setup
+
