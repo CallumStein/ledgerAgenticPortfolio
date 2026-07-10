@@ -1,11 +1,13 @@
 from core.config import HLEDGER_FILE, INCOME_FILE, EXPENSES_FILE, BANK_FILE
+import os
 import subprocess
 import json
 from typing import List, Dict
 from datetime import datetime
 
-def run_hledger_command(command: str) -> str:
-
+def run_hledger_command(
+        command: str
+    ) -> str:
     """Executes a hledger command and returns the output."""
     try:
         # We'll assume the hledger file is in the current directory or specified
@@ -30,11 +32,15 @@ def get_summary() -> str:
     """Gets a summary of the portfolio."""
     return run_hledger_command("balance")
 
-def get_transactions(account: str) -> str:
+def get_transactions(
+        account: str
+    ) -> str:
     """Gets transactions for a specific account."""
     return run_hledger_command(f"register {account}")
 
-def add_transaction(transaction_string: str) -> str:
+def add_transaction(
+        transaction_string: str
+    ) -> str:
     """Adds a transaction to the hledger portfolio."""
     try:
         # We use hledger to check if the transaction is valid before adding it.
@@ -68,7 +74,11 @@ def add_transaction(transaction_string: str) -> str:
     except Exception as e:
         return f"Error: {str(e)}"
 
-def add_income(amount: float, currency: str, description: str) -> str:
+def add_income(
+        amount: float, 
+        currency: str, 
+        description: str
+    ) -> str:
     """Adds an income transaction to the Assets:Bank:CommBank Every Day account."""
     try:
         date = datetime.now().strftime("%Y-%m-%d")
@@ -103,7 +113,11 @@ def add_income(amount: float, currency: str, description: str) -> str:
     except Exception as e:
         return f"Error: {str(e)}"
 
-def add_expense(amount: float, currency: str, description: str) -> str:
+def add_expense(
+        amount: float, 
+        currency: str, 
+        description: str
+    ) -> str:
     """Adds an expense transaction to the Assets:Bank:CommBank Every Day account."""
     try:
         date = datetime.now().strftime("%Y-%m-%d")
@@ -137,3 +151,55 @@ def add_expense(amount: float, currency: str, description: str) -> str:
         return f"Error: The transaction is invalid. {e.stderr}"
     except Exception as e:
         return f"Error: {str(e)}"
+    
+def add_bank_transaction(
+    amount: float,
+    currency: str,
+    description: str,
+    source_account: str,
+    destination_account: str,
+) -> str:
+    """Adds a transfer between two bank accounts."""
+    temp_file = "temp_bank_transaction.hledger"
+
+    try:
+        date = datetime.now().strftime("%Y-%m-%d")
+
+        transaction_string = (
+            f"{date} * {description}\n"
+            f"    {destination_account}    {amount:.2f} {currency}\n"
+            f"    {source_account}    -{amount:.2f} {currency}"
+        )
+
+        with open(BANK_FILE, "r") as f:
+            content = f.read()
+
+        with open(temp_file, "w") as f:
+            f.write(content + "\n" + transaction_string)
+
+        # Validate the transaction.
+        subprocess.run(
+            ["hledger", "-f", temp_file, "balance"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        # Append the transaction to BANK_FILE.
+        with open(BANK_FILE, "a") as f:
+            f.write("\n" + transaction_string)
+
+        return (
+            f"Successfully transferred {amount:.2f} {currency} "
+            f"from {source_account} to {destination_account}"
+        )
+
+    except subprocess.CalledProcessError as e:
+        return f"Error: The transaction is invalid. {e.stderr}"
+
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+    finally:
+        if os.path.exists(temp_file):
+            os.remove(temp_file)
