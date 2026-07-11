@@ -11,6 +11,7 @@ from tools.hledger_tools import (
     add_bank_transaction,
     add_income,
     add_expense,
+    import_csv_transactions,
 )
 from core.config import API_KEY, MODEL_NAME, BASE_URL
 
@@ -220,6 +221,50 @@ class PortfolioAgent:
                     },
                 },
             },
+            {
+                "type": "function",
+                "function": {
+                    "name": "import_csv_transactions",
+                    "description": (
+                        "Import transactions from a bank CSV file. Column 1 must "
+                        "contain the date, column 2 the transaction amount, column 3 "
+                        "the description, and column 4 may contain the running balance. "
+                        "The running balance is ignored. Salary income is written to "
+                        "INCOME_FILE, outgoing bank transfers are written to BANK_FILE, "
+                        "and regular expenses are written to EXPENSES_FILE."
+                    ),
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "csv_file": {
+                                "type": "string",
+                                "description": (
+                                    "The full path to the CSV file to import."
+                                ),
+                            },
+                            "bank_account": {
+                                "type": "string",
+                                "description": (
+                                    "The full hledger account associated with the CSV. "
+                                    "For CommBank Every Day, always use "
+                                    "'Assets:Bank:CommBank Every Day'."
+                                ),
+                            },
+                            "currency": {
+                                "type": "string",
+                                "description": (
+                                    "The currency code, such as AUD. Defaults to AUD."
+                                ),
+                            },
+                        },
+                        "required": [
+                            "csv_file",
+                            "bank_account",
+                        ],
+                        "additionalProperties": False,
+                    },
+                },
+            },
         ]
 
     def run(self, user_query: str) -> str:
@@ -351,6 +396,13 @@ class PortfolioAgent:
                 source_account=arguments.get("source_account"),
                 destination_account=arguments.get("destination_account"),
                 transaction_date=arguments.get("transaction_date"),
+            )
+        
+        if function_name == "import_csv_transactions":
+            return import_csv_transactions(
+                csv_file=arguments.get("csv_file"),
+                bank_account=arguments.get("bank_account"),
+                currency=arguments.get("currency", "AUD"),
             )
 
         return f"Error: Tool {function_name} not found."
