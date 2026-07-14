@@ -22,7 +22,7 @@ def main() -> None:
     "conversation": "fg:#d0d0d0",
     "prompt": "fg:#00d7d7 bold",
     "input": "fg:#ffffff",
-    "footer": "fg:#808080 italic",
+    "footer": "fg:#808080",
     "separator": "fg:#555555",
     })
 
@@ -77,6 +77,7 @@ def main() -> None:
             conversation,
             separator,
             input_area,
+            separator,
             Window(height=1),
             footer,
         ]
@@ -90,7 +91,7 @@ def main() -> None:
         full_screen=True,
         mouse_support=True,
         style=style,
-        color_depth=None,
+        #color_depth=None,
     )
 
     def append_message(role: str, message: str) -> None:
