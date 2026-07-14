@@ -1,5 +1,6 @@
 import os
 
+import asyncio
 from prompt_toolkit import Application
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.layout import HSplit, Layout, Window
@@ -105,29 +106,22 @@ def main() -> None:
             + f"\n{role}:\n{message}\n"
         )
 
-        # Keep the view positioned at the latest message.
         conversation.buffer.cursor_position = len(
             conversation.buffer.text
         )
 
-    def submit_input(buffer: Buffer) -> bool:
-        user_input = buffer.text.strip()
-        buffer.text = ""
+        application.invalidate()
 
-        if not user_input:
-            return True
-
-        if user_input.lower() in {"exit", "quit"}:
-            application.exit()
-            return True
-
-        append_message("You", user_input)
-        append_message("Assistant", "Thinking...")
-
+    async def process_prompt(user_input: str) -> None:
+        """
+        Run the blocking agent call outside the UI thread.
+        """
         try:
-            response = agent.run(user_input)
+            response = await asyncio.to_thread(
+                agent.run,
+                user_input,
+            )
 
-            # Remove the temporary "Thinking..." message.
             marker = "\nAssistant:\nThinking...\n"
 
             if conversation.text.endswith(marker):
@@ -149,6 +143,38 @@ def main() -> None:
                 "Error",
                 f"{type(error).__name__}: {error}",
             )
+
+        finally:
+            input_area.read_only = False
+            application.layout.focus(input_area)
+            application.invalidate()
+
+
+    def submit_input(buffer: Buffer) -> bool:
+        user_input = buffer.text.strip()
+        buffer.text = ""
+
+        if not user_input:
+            return True
+
+        if user_input.lower() in {"exit", "quit"}:
+            application.exit()
+            return True
+
+        # These messages are added immediately.
+        append_message("You", user_input)
+        append_message("Assistant", "Thinking...")
+
+        # Prevent another submission while the current request is running.
+        input_area.read_only = True
+
+        # Force prompt_toolkit to redraw before starting the model request.
+        application.invalidate()
+
+        # Run the blocking request in the background.
+        application.create_background_task(
+            process_prompt(user_input)
+        )
 
         return True
 
