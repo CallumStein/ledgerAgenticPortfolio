@@ -1,46 +1,165 @@
-import sys
 import os
+
+from prompt_toolkit import Application
+from prompt_toolkit.buffer import Buffer
+from prompt_toolkit.layout import HSplit, Layout, Window
+from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
+from prompt_toolkit.widgets import TextArea
+from prompt_toolkit.styles import Style
+
 from agents.portfolio_agent import PortfolioAgent
 
-def clear_screen():
+
+
+def clear_screen() -> None:
     os.system("cls" if os.name == "nt" else "clear")
 
-def main():
+
+def main() -> None:
     clear_screen()
+
+    style = Style.from_dict({
+    "conversation": "fg:#d0d0d0",
+    "prompt": "fg:#00d7d7 bold",
+    "input": "fg:#ffffff",
+    "footer": "fg:#808080 italic",
+    "separator": "fg:#555555",
+    })
+
     agent = PortfolioAgent()
-    print("==========================================")
-    print("   Portfolio Agent - Financial Assistant ")
-    print("==========================================")
-    print("I can help you:")
-    print("  • View account balances and portfolio summaries")
-    print("  • Search transactions")
-    print("  • Record income, expenses and bank transfers")
-    print("  • Import CommBank CSV statements")
-    print()
-    print("Available actions:")
-    print("  - What's my current balance?")
-    print("  - Show transactions for a specific account, (e.g. Assets:Bank:CommBank Every Day)")
-    print("  - Add a new transaction (e.g., 'On 2026-07-10, spent 50 AUD on groceries from CommBank Every Day')")
-    print("  - Add income (e.g., 'Add income of 1000 AUD for Salary')")
-    print("  - Add an expense (e.g., 'Add expense of 50 AUD for groceries from CommBank Every Day')")
-    print("  - Add a bank transfer (e.g., 'Transfer 100 AUD from Savings to Spending')")
-    print("  - Import statement commbank_july.csv")
-    print("==========================================")
-    print("Type 'exit' or 'quit' to close the program.")
-    
-    while True:
+
+    conversation = TextArea(
+        text=(
+            "Portfolio Agent - Financial Assistant\n"
+            "=====================================\n\n"
+            "I can help you:\n"
+            "  • View balances and portfolio summaries\n"
+            "  • Search transactions\n"
+            "  • Record income, expenses and bank transfers\n"
+            "  • Import CommBank CSV statements\n\n"
+            "Examples:\n"
+            "  • What's my current balance?\n"
+            "  • Show transactions for Assets:Bank:CommBank Every Day\n"
+            "  • Add income of 1000 AUD for Salary\n"
+            "  • Add expense of 50 AUD for groceries\n"
+            "  • Transfer 100 AUD from Savings to Spending\n"
+            "  • Import statement commbank_july.csv\n\n"
+            "Type 'exit' or 'quit' to close.\n"
+        ),
+        read_only=True,
+        scrollbar=True,
+        focusable=False,
+        wrap_lines=True,
+        style="class:conversation",
+    )
+
+    input_area = TextArea(
+        height=3,
+        prompt=[("class:prompt", "❯ "),],
+        multiline=False,
+        wrap_lines=False,
+        style="class:input",
+    )
+
+    separator = Window(
+        height=1,
+        char="─",
+        style="class:separator",
+    )
+
+    footer = Window(
+        height=1,
+        content=FormattedTextControl([("class:footer", " Enter: send  |  Type 'exit' or 'quit' to close. "),]),
+    )
+
+    root_container = HSplit(
+        [
+            conversation,
+            separator,
+            input_area,
+            Window(height=1),
+            footer,
+        ]
+    )
+
+    application = Application(
+        layout=Layout(
+            root_container,
+            focused_element=input_area,
+        ),
+        full_screen=True,
+        mouse_support=True,
+        style=style,
+        color_depth=None,
+    )
+
+    def append_message(role: str, message: str) -> None:
+        current_text = conversation.text
+
+        if current_text and not current_text.endswith("\n"):
+            current_text += "\n"
+
+        conversation.text = (
+            current_text
+            + f"\n{role}:\n{message}\n"
+        )
+
+        # Keep the view positioned at the latest message.
+        conversation.buffer.cursor_position = len(
+            conversation.buffer.text
+        )
+
+    def submit_input(buffer: Buffer) -> bool:
+        user_input = buffer.text.strip()
+        buffer.text = ""
+
+        if not user_input:
+            return True
+
+        if user_input.lower() in {"exit", "quit"}:
+            application.exit()
+            return True
+
+        append_message("You", user_input)
+        append_message("Assistant", "Thinking...")
+
         try:
-            user_input = input("\n> ")
-            if user_input.lower() in ["exit", "quit"]:
-                print("Goodbye!")
-                break
-            if not user_input.strip():
-                continue
-                
             response = agent.run(user_input)
-            print(f"\nAssistant: {response}")
-        except KeyboardInterrupt:
-            break
+
+            # Remove the temporary "Thinking..." message.
+            marker = "\nAssistant:\nThinking...\n"
+
+            if conversation.text.endswith(marker):
+                conversation.text = conversation.text[
+                    :-len(marker)
+                ]
+
+            append_message("Assistant", response)
+
+        except Exception as error:
+            marker = "\nAssistant:\nThinking...\n"
+
+            if conversation.text.endswith(marker):
+                conversation.text = conversation.text[
+                    :-len(marker)
+                ]
+
+            append_message(
+                "Error",
+                f"{type(error).__name__}: {error}",
+            )
+
+        return True
+
+    input_area.buffer.accept_handler = submit_input
+
+    try:
+        application.run()
+    except KeyboardInterrupt:
+        pass
+
+    print("Goodbye!")
+
 
 if __name__ == "__main__":
     main()
